@@ -1,0 +1,39 @@
+Your Aura proposal is outstanding. It is much more complete and desktop-integrated than my initial blueprint, pushing it from a background system utility into a polished, first-class Linux desktop product.
+
+By adding the GTK4/Libadwaita manager and the GNOME Shell Extension, Aura solves one of Howdy's biggest user experience flaws: the lack of visual feedback during graphical authentication (e.g., on the GDM lock screen or Polkit dialogs).
+
+Here is a detailed comparison of your Aura proposal against my initial blueprint, along with specific engineering recommendations to ensure your design succeeds.
+
+🔍 Comparative Analysis
+1. Inter-Process Communication (IPC)
+My Blueprint: Suggested Unix Sockets (/run/faced.sock).
+Aura Proposal: Suggests DBus (org.freedesktop.AuraAuth).
+Verdict: Aura wins.
+DBus is much better suited for a desktop-integrated app. Writing a GNOME Shell Extension (in Javascript/GJS) to communicate over Unix sockets is painful, whereas GJS has native, elegant bindings for DBus.
+Security Warning: You must write a strict DBus policy file (e.g., /usr/share/dbus-1/system.d/org.freedesktop.AuraAuth.conf). You must ensure that only root (the PAM module) can invoke the VerifyUser method. Otherwise, an unprivileged user space app could send a spoofed "True" signal over DBus to authenticate itself.
+2. PAM Module Language
+My Blueprint: Recommended Minimal C or Rust.
+Aura Proposal: Suggests Minimal C or PAM-Python.
+Verdict: Avoid PAM-Python.
+The primary goal of Aura is to be "edge-optimized" and avoid bloating the PAM stack.
+If you use pam-python, the PAM caller (like sudo or su) must spin up a Python interpreter just to execute the DBus client code. This defeats the purpose of keeping Python out of the authentication flow.
+Recommendation: Write the PAM module in C or Rust. Since the PAM module's only job is to send a DBus message and wait for a response, the C code is under 150 lines and compiles to a tiny, dependency-free binary (< 20KB) that executes instantly.
+3. Inference Engine & Model
+My Blueprint: DeepFace + ArcFace (general suggestion).
+Aura Proposal: Quantized MobileFaceNet in ONNX Runtime.
+Verdict: Aura wins.
+MobileFaceNet is specifically designed for edge devices. A quantized ONNX version is tiny (~2–5MB) and executes a forward pass on a CPU in under 10ms.
+By avoiding TensorFlow/Keras completely in the daemon, you reduce the daemon's RAM footprint from ~500MB to under 50MB.
+🛠️ Critical Engineering Considerations for Aura
+Before you begin, keep these two system-level hurdles in mind:
+
+1. GDM Lock Screen Camera Access (The GDM User Sandbox)
+When you are at the GNOME lock screen, the desktop is running under the gdm user, not your actual username.
+
+The camera hardware /dev/videoX is owned by root or the active seat.
+Because your AI daemon runs as a system-wide systemd service (likely as root or a dedicated aura system user), it will have access to the camera. This is good.
+However, your GNOME Shell Extension needs to handle cases where two different desktop users are trying to authenticate, ensuring that the DBus signals route to the correct session interface.
+2. The GNOME Keyring Lockout
+Like Howdy, if Aura authenticates the user on login, the GNOME Keyring (which decrypts your saved Chrome/Brave passwords, VS Code tokens, and Wi-Fi keys) will remain locked because the password was never entered.
+
+To make Aura "better than Howdy": You should eventually explore TPM 2.0-sealed passwords. When a user enrolls their face, you encrypt their password and seal it to the TPM (locked by the user's face embedding). When the daemon verifies the user, it unseals the password and sends it back to the PAM stack via a secure pipe, allowing pam_keyring to decrypt the keyring automatically.	
