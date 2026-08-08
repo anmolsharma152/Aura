@@ -3,6 +3,8 @@
 
 Aura is a lightweight, low-latency biometric facial verification service designed specifically for modern Linux desktop environments running Wayland and the GNOME ecosystem. This document serves as the single source of truth for the system architecture, component boundaries, and implementation steps.
 
+**Engineered by [Anmol Sharma](https://linkedin.com/in/anmolsharma152)** | **[GitHub Profile](https://github.com/anmolsharma152)** | **[Live Portfolio](https://anmolsharma152.vercel.app)**
+
 ## Implementation status
 
 | Component | State |
