@@ -3,6 +3,18 @@
 
 Aura is a lightweight, low-latency biometric facial verification service designed specifically for modern Linux desktop environments running Wayland and the GNOME ecosystem. This document serves as the single source of truth for the system architecture, component boundaries, and implementation steps.
 
+## Implementation status
+
+| Component | State |
+| :--- | :--- |
+| `pam_aura.so` C PAM client (Unix socket IPC) | Implemented (`src/pam/`) |
+| `aurad` daemon: camera capture, MobileFaceNet verification, MiniFASNet liveness (ONNX Runtime) | Implemented (`src/daemon/`) |
+| Face enrollment | Implemented (`scripts/enroll.py`) |
+| TPM 2.0 keyring unsealing | Planned |
+| GTK4 configuration app, GNOME Shell extension, DBus signals | Planned |
+
+Sections below describe the full target design, including the planned parts.
+
 
 ## Docs
 
@@ -52,7 +64,7 @@ graph TD
 | **Machine Learning Models** | Deep Learning Models | Quantized **MobileFaceNet** (Verification) + **MiniFASNet** (Liveness) |
 | **Local IPC** | Low-Overhead Transit | Unix Domain Sockets (`/var/run/aura.sock`) |
 | **Desktop Signals** | Session Broadcasting | System Bus DBus (`pydbus`) |
-| **Credential Storage** | Cryptographic Vault | **TPM 2.0** Infrastructure (`tpm2-tss`) |
+| **Credential Storage** | Cryptographic Vault | **TPM 2.0** Infrastructure (`tpm2-tss`), planned |
 | **User Interface** | Control Panel Configuration | `PyGObject` (GTK4 + Libadwaita) |
 | **Desktop Integration** | Compositor Presentation | GNOME JavaScript (GJS) Shell Extension |
 
@@ -194,7 +206,10 @@ if __name__ == "__main__":
     daemon.run()
 ```
 
-### C. True Passwordless Infrastructure: TPM 2.0 Integration
+### C. True Passwordless Infrastructure: TPM 2.0 Integration (planned)
+
+> Not implemented yet. This section is the design for a future milestone.
+
 To fully bypass secondary password challenges when mounting user desktop spaces, Aura leverages the platform’s **Trusted Platform Module (TPM 2.0)** to securely store the keyring passphrase.
 
 * **Sealing Strategy:** The system user's login password is encrypted via the TPM's Storage Root Key (SRK) and bound to **PCR 0 (Firmware Integrity)**, **PCR 7 (Secure Boot Status)**, and a dedicated cryptographic handle.
